@@ -18,7 +18,7 @@ In order for it to be functional, `charts/common/` will need the following updat
 ## Installation
 
 ```bash
-helm install RELEASE_NAME oci://ghcr.io/bitnomee/chart-common
+helm install my-release oci://ghcr.io/bitnomee/charts/common
 ```
 
 ## Configuration
