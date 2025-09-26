@@ -72,7 +72,7 @@ jobs:
           if [ -n "${{ github.event.inputs.sha }}" ]; then
             # SHA-based build from manual dispatch
             SHORT_SHA=$(echo "${{ github.event.inputs.sha }}" | cut -c1-7)
-            BUILD_VERSION="${CHART_VERSION}-${SHORT_SHA}"
+            BUILD_VERSION="${CHART_VERSION}-sha${SHORT_SHA}"
             IS_PRERELEASE="true"
             CREATE_RELEASE="false"
             echo "BUILD_TYPE=sha" >> $GITHUB_OUTPUT
@@ -80,7 +80,7 @@ jobs:
           elif [ "${{ github.ref_name }}" = "feat/releases" ]; then
             # SHA-based build from feat/releases branch push
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-            BUILD_VERSION="${CHART_VERSION}-${SHORT_SHA}"
+            BUILD_VERSION="${CHART_VERSION}-sha${SHORT_SHA}"
             IS_PRERELEASE="true"
             CREATE_RELEASE="false"
             echo "BUILD_TYPE=branch_sha" >> $GITHUB_OUTPUT
@@ -152,6 +152,14 @@ jobs:
           yq eval '.version = "'"$BUILD_VERSION"'"' -i "${{ steps.chart_info.outputs.CHART_DIR }}/Chart.yaml"
           echo "✅ Updated Chart.yaml version to $BUILD_VERSION for SHA build"
 
+      - name: Login to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.GCR }} --username ${{ github.repository_owner }} --password-stdin
+
+      - name: Update dependencies
+        run: |
+          helm dependency build "${{ steps.chart_info.outputs.CHART_DIR }}"
+
       - name: Lint chart
         run: |
           helm lint "${{ steps.chart_info.outputs.CHART_DIR }}"
@@ -159,10 +167,6 @@ jobs:
       - name: Package chart
         run: |
           helm package "${{ steps.chart_info.outputs.CHART_DIR }}" --destination .
-
-      - name: Login to GitHub Container Registry
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.GCR }} --username ${{ github.repository_owner }} --password-stdin
 
       - name: Push chart to GHCR
         run: |
